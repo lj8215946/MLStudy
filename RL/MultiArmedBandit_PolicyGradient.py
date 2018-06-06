@@ -36,7 +36,7 @@ total_episodes = 1000  # Set total number of episodes to train agent on.
 total_reward = np.zeros(num_bandits)  # Set scoreboard for bandits to 0.
 e = 0.1  # Set the chance of taking a random action.
 
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 
 # Launch the tensorflow graph
 with tf.Session() as sess:
