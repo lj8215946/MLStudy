@@ -2,7 +2,6 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
 import gym
-import matplotlib.pyplot as plt
 
 # 加载平衡小车的虚拟环境
 env = gym.make('CartPole-v0')
@@ -51,9 +50,14 @@ class Agent:
         self.reward_holder = tf.placeholder(shape=[None], dtype=tf.float32)
         self.action_holder = tf.placeholder(shape=[None], dtype=tf.int32)
 
+        # tf.shape(self.output)[0]是批处理的size，tf.shape(self.output)[1]是action的size
+        # tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1]选择了每此选择的第一项
+        # self.indexes打成1D之后每个选择的项
         self.indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
+        # 将所有被选中的输出项集中在一起
         self.responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
 
+        # 使用policy gradient策略计算loss function
         self.loss = -tf.reduce_mean(tf.log(self.responsible_outputs) * self.reward_holder)
 
         trainable_variables = tf.trainable_variables()
@@ -73,7 +77,9 @@ tf.reset_default_graph()  # Clear the Tensorflow graph.
 
 myAgent = Agent(lr=1e-2, s_size=4, a_size=2, h_size=8)  # Load the agent.
 
+# 做5000次这个游戏
 total_episodes = 5000  # Set total number of episodes to train agent on.
+# 没做一次游戏最大的步数
 max_ep = 999
 update_frequency = 5
 
