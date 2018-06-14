@@ -66,9 +66,11 @@ class Agent:
             placeholder = tf.placeholder(tf.float32, name=str(each_idx) + '_holder')
             self.gradient_holders.append(placeholder)
 
+        # 该方法计算了loss对每一个trainable_variables的偏导（其实就是梯度），返回一个len（trainable_variables）的数组，每一项为loss对每一个trainable_variable求偏导的总和，
         self.gradients = tf.gradients(self.loss, trainable_variables)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+        # 这一步根据gradient_holders的梯度值更新trainable_variables
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, trainable_variables))
 
 
