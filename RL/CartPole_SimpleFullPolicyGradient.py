@@ -92,30 +92,42 @@ with tf.Session() as sess:
     sess.run(init)
     i = 0
     total_reward = []
-    total_lenght = []
+    total_length = []
 
+    # 下面几行创建了一个list，对所有的trainable_variables创建一个shape相同的全零的数组
     gradBuffer = sess.run(tf.trainable_variables())
     for ix, grad in enumerate(gradBuffer):
         gradBuffer[ix] = grad * 0
 
+    # 循环total_episodes多次游戏
     while i < total_episodes:
         s = env.reset()
-        running_reward = 0
+        running_reward = 0# 记录总奖励值
+        # 存储每一步选择获的【老状态，动作，奖励，新状态】
         ep_history = []
+
+        # 最大步数循环
         for j in range(max_ep):
             # Probabilistically pick an action given our network outputs.
+            # 按照action的概率选择一个action
             a_dist = sess.run(myAgent.output, feed_dict={myAgent.state_in: [s]})
             a = np.random.choice(a_dist[0], p=a_dist[0])
             a = np.argmax(a_dist == a)
 
+            # 按照给定的Action进行动作的选择
             s1, r, d, _ = env.step(a)  # Get our reward for taking an action given a bandit.
+            # 每一次reward都是1这个为什么会有效果呢？
+            # if d:
+            #     r = -10
             ep_history.append([s, a, r, s1])
             s = s1
             running_reward += r
             if d:
                 # Update the network.
                 ep_history = np.array(ep_history)
+                # 这里是非常关键的一步，改一步进行了所谓的对未来的收益打折的处理
                 ep_history[:, 2] = discount_rewards(ep_history[:, 2])
+                # state是一个len==4的数组，numpy的二维数组和数组嵌套数组不是同一个东西，需要用vstack来将数组套数组转化为二维数组。
                 feed_dict = {myAgent.reward_holder: ep_history[:, 2],
                              myAgent.action_holder: ep_history[:, 1], myAgent.state_in: np.vstack(ep_history[:, 0])}
                 grads = sess.run(myAgent.gradients, feed_dict=feed_dict)
@@ -124,15 +136,16 @@ with tf.Session() as sess:
 
                 if i % update_frequency == 0 and i != 0:
                     feed_dict = dictionary = dict(zip(myAgent.gradient_holders, gradBuffer))
+                    # 这里大费周章的将梯度拿出来专门搞其实就是为了没update_frequency（5）次，进行一次权值的更新相当于一个小的batch
                     _ = sess.run(myAgent.update_batch, feed_dict=feed_dict)
                     for ix, grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
 
                 total_reward.append(running_reward)
-                total_lenght.append(j)
+                total_length.append(j)
                 break
 
                 # Update our running tally of scores.
         if i % 100 == 0:
-            print(np.mean(total_reward[-100:]))
+            print("Total Reward:", np.mean(total_reward[-100:]), "，Total Step:", np.mean(total_length))
         i += 1
